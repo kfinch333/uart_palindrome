@@ -1,0 +1,92 @@
+.org 0x10000000
+
+# Initializations
+li $sp, 0x10fffffc
+li $t0, array_ptr	# Initialize Array Pointer
+li $t1, 0xf0000000	# command register
+li $t2, 0xf0000004	# status register
+li $t3, 0xf0000008	# receive buffer
+li $t4, 0b10	# mask
+li $t5, 0x0	# mask result
+li $t6, 0x0	# for comparison
+li $t7, 0x0	# character
+li $t8, 90		# for comparing case
+li $t9, 0x0	# for case converter branch
+li $s0, 46		# period ascii
+li $s1, 0x100000a0	# head pointer
+li $s2, 0x100000a0	# tail pointer
+li $s3, 0x0	# value in head pointer
+li $s4, 0x0	# value in tail pointer
+li $s5, 0x0	# check if head pointer is greater than array to determine if palidrome
+li $s6, 0b00100000	# white space ascii
+li $s7, 0x0	# 
+
+
+# Initialize registers 
+
+j main
+nop
+
+array_ptr:			# Label pointing to 100 word array
+	.space 100
+
+
+main:
+	lw $t6, 0($t2)	# load status register for compare
+	and $t5, $t6, $t4	#compare status register
+	bne $t5, $0, is_one	# is status register ready?
+	nop
+	j main		#status register is not ready
+	nop
+
+	is_one:
+		lw $t7, 0($t3)		# get character
+		beq $t7, $s6, ready		# skip white space
+		nop
+		slt $t9, $t8, $t7		# check input case
+		bne $t9, $0, convert		# upper or lower case?
+		nop
+		beq $t7, $s0, string_end	# period detected
+		nop
+		sw $t7, 0($t0)		# Loading values into array
+		come_back:
+		addiu $t0, $t0, 4		# increment array
+		addiu $s2, $s2, 4		# increment tail pointer
+		ready:
+		sw $t4, 0($t1)		# ready bit
+		j main
+		nop
+
+	convert:				#case converter
+		addiu $t7, $t7, -32
+		sw $t7, 0($t0)		# Loading values into array
+		j come_back
+		nop
+
+	string_end:			# string has ended, palidrome check
+		addiu $s2, $s2, -4		# decrement tail pointer
+		lw $s3, 0($s1)		# load vaule of head pointer
+		lw $s4, 0($s2)		# load vaule of tail pointer
+		bne $s4, $s3, no_palidrome	# compare; it is not a palidrome
+		nop
+		addiu $s1, $s1, 4		# increment head pointer
+		slt $s5, $t0, $s1		# is head greater than array? (went trhough all array values)
+		bne $s5, $0, palidrome	# it is a palidrome
+		nop
+		j string_end
+		nop
+
+	no_palidrome: 			# string is not a palidrome
+		li $a0, 0
+		call project3_print
+		j ready
+		nop
+
+	palidrome: 			# string is a palidrome
+		li $a0, 1
+		call project3_print
+		j ready
+		nop
+
+	j main
+	nop
